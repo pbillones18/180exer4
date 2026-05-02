@@ -15,24 +15,32 @@
  * Function to print the submatrix partition.
  * This replaces the old thread function.
  */
-void process_submatrix(int **X, int m, int n, int index, int starting_index) {
-    printf("\n--- Submatrix %d ---\n", index);
-    printf("Rows: %d, Starting Row Index: %d\n", m, starting_index);
+// void process_submatrix(int **X, int m, int n, int index, int starting_index) {
+//     printf("\n--- Submatrix %d ---\n", index);
+//     printf("Rows: %d, Starting Row Index: %d\n", m, starting_index);
     
-    for (int row = 0; row < m; row++) {
-        for (int col = 0; col < n; col++) {
-            printf("%4d ", X[starting_index + row][col]);
-        }
-        printf("\n");
-    }
-}
+//     for (int row = 0; row < m; row++) {
+//         for (int col = 0; col < n; col++) {
+//             printf("%4d ", X[starting_index + row][col]);
+//         }
+//         printf("\n");
+//     }
+// }
+
+typedef struct {
+    char ip[50];
+    int port;
+} SlaveInfo;
 
 int main(int argc, char *argv[]) {
     // int n, t, rows, columns;
     int n, rows, columns;
-    int t = 2;
+    // int t = 2;
     struct timeval t1, t2;
     double elapsedTime;
+    int t;
+
+    SlaveInfo slaves[100];
 
     // Seed the random number generator
     srand(time(NULL));
@@ -48,7 +56,34 @@ int main(int argc, char *argv[]) {
     int status = atoi(argv[3]);
 
     printf("\nMatrix Size (n): %d\n", n);
-    
+    FILE *fp = fopen("config.txt", "r");
+
+    if (fp == NULL) {
+        perror("config file failed");
+        return 1;
+    }
+
+    fscanf(fp, "%d", &t);
+
+    for (int i = 0; i < t; i++) {
+
+        fscanf(fp,
+            "%s %d",
+            slaves[i].ip,
+            &slaves[i].port);
+    }
+
+    fclose(fp);
+
+    printf("\nNumber of slaves: %d\n", t);
+
+    for (int i = 0; i < t; i++) {
+
+        printf("Slave %d -> %s:%d\n",
+            i,
+            slaves[i].ip,
+            slaves[i].port);
+    }
     int socks[2];
     if (status == 0) {
 
@@ -65,11 +100,15 @@ int main(int argc, char *argv[]) {
 
             slave_addr.sin_family = AF_INET;
 
-            slave_addr.sin_port = htons(8081 + i);
+            // slave_addr.sin_port = htons(8081 + i);
+            slave_addr.sin_port = htons(slaves[i].port);
 
+            // inet_pton(AF_INET,
+            //         "127.0.0.1",
+            //         &slave_addr.sin_addr);
             inet_pton(AF_INET,
-                    "127.0.0.1",
-                    &slave_addr.sin_addr);
+                slaves[i].ip,
+                &slave_addr.sin_addr);
 
             printf("\nConnecting to slave %d...\n", i);
 
