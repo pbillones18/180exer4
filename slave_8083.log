@@ -1,0 +1,17 @@
+
+Matrix Size (n): 16000
+
+Number of slaves: 4
+Slave 0 -> 127.0.0.1:8081
+Slave 1 -> 127.0.0.1:8082
+Slave 2 -> 127.0.0.1:8083
+Slave 3 -> 127.0.0.1:8084
+
+Slave listening on port 8083...
+Master connected!
+
+Receiving matrix of size 4000 x 16000
+
+Received Matrix:
+
+Receiving Time: 10.222397 seconds

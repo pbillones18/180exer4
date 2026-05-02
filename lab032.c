@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
             slaves[i].ip,
             slaves[i].port);
     }
-    int socks[2];
+    int socks[100];
     if (status == 0) {
 
         for (int i = 0; i < t; i++) {
