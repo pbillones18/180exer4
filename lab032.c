@@ -196,9 +196,10 @@ int main(int argc, char *argv[]) {
             0);
     }
 
+    if(recv_cols<=10){
     printf("\nReceived Matrix:\n");
     // printf("%d received rows", recv_rows);
-    if(recv_cols<=10){
+    
         for (int i = 0; i < recv_rows; i++) {
         for (int j = 0; j < recv_cols; j++) {
             printf("%4d", recv_matrix[i][j]);
@@ -248,8 +249,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Print the full original matrix
-    printf("\nOriginal Matrix X of size %d x %d:\n", rows, columns);
     if(n<=10){
+    printf("\nOriginal Matrix X of size %d x %d:\n", rows, columns);
+    
 
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < columns; j++) {
@@ -350,3 +352,21 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
+// 16
+// 127.0.0.1 8081
+// 127.0.0.1 8082
+// 127.0.0.1 8083
+// 127.0.0.1 8084
+// 127.0.0.1 8085
+// 127.0.0.1 8086
+// 127.0.0.1 8087
+// 127.0.0.1 8088
+// 127.0.0.1 8089
+// 127.0.0.1 8090
+// 127.0.0.1 8091
+// 127.0.0.1 8092
+// 127.0.0.1 8093
+// 127.0.0.1 8094
+// 127.0.0.1 8095
+// 127.0.0.1 8096
