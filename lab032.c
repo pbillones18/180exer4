@@ -166,7 +166,8 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Master connected!\n");
-
+    struct timeval t3,t4;
+    gettimeofday(&t3, NULL);
     // char buffer[100];
 
     // recv(client_socket, buffer, sizeof(buffer), 0);
@@ -197,13 +198,22 @@ int main(int argc, char *argv[]) {
 
     printf("\nReceived Matrix:\n");
     // printf("%d received rows", recv_rows);
-    for (int i = 0; i < recv_rows; i++) {
+    if(recv_cols<=10){
+        for (int i = 0; i < recv_rows; i++) {
         for (int j = 0; j < recv_cols; j++) {
             printf("%4d", recv_matrix[i][j]);
         }
         printf("\n");
     }
+    }
+    
+    gettimeofday(&t4, NULL);
+    elapsedTime =
+            (t4.tv_sec - t3.tv_sec) +
+            (t4.tv_usec - t3.tv_usec) / 1000000.0;
 
+        printf("\nReceiving Time: %lf seconds\n",
+            elapsedTime);
     send(client_socket, "ack", 3, 0);
 
     close(client_socket);
@@ -239,12 +249,16 @@ int main(int argc, char *argv[]) {
 
     // Print the full original matrix
     printf("\nOriginal Matrix X of size %d x %d:\n", rows, columns);
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < columns; j++) {
-            printf("%4d", arr[i][j]);
+    if(n<=10){
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < columns; j++) {
+                printf("%4d", arr[i][j]);
+            }
+            printf("\n");
         }
-        printf("\n");
     }
+    
 
     // for (int i = 0; i < rows; i++) {
     //     send(sock, arr[i], columns * sizeof(int), 0);
