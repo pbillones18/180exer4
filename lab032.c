@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("\nReceived Matrix:\n");
-
+    // printf("%d received rows", recv_rows);
     for (int i = 0; i < recv_rows; i++) {
         for (int j = 0; j < recv_cols; j++) {
             printf("%4d", recv_matrix[i][j]);
@@ -252,6 +252,7 @@ int main(int argc, char *argv[]) {
     if (status == 0) {
 
         int starting_row = 0;
+        gettimeofday(&t1, NULL);
 
         for (int s = 0; s < t; s++) {
 
@@ -295,7 +296,15 @@ int main(int argc, char *argv[]) {
                 buffer);
 
             close(socks[s]);
+            
         }
+        gettimeofday(&t2, NULL);
+        elapsedTime =
+            (t2.tv_sec - t1.tv_sec) +
+            (t2.tv_usec - t1.tv_usec) / 1000000.0;
+
+        printf("\nDistribution Time: %lf seconds\n",
+            elapsedTime);
     }
     // (3) Partitioning and processing (Sequential Version)
     // gettimeofday(&t1, NULL);
