@@ -1,5 +1,3 @@
-
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <malloc.h>
 #include <stdlib.h>
@@ -12,7 +10,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <sched.h>
+
 /**
  * Function to print the submatrix partition.
  * This replaces the old thread function.
@@ -34,45 +32,6 @@ typedef struct {
     int port;
 } SlaveInfo;
 
-
-void set_cpu_affinity(int slave_index) {
-
-    int total_cores =
-        sysconf(_SC_NPROCESSORS_ONLN);
-
-    int usable_cores;
-
-    if (total_cores > 1) {
-        usable_cores = total_cores - 1;
-    } else {
-        usable_cores = 1;
-    }
-
-    int target_core =
-        slave_index % usable_cores;
-
-    cpu_set_t cpuset;
-
-    CPU_ZERO(&cpuset);
-
-    CPU_SET(target_core, &cpuset);
-
-    if (sched_setaffinity(0,
-                          sizeof(cpu_set_t),
-                          &cpuset) == 0) {
-
-        printf("\n[Affinity] Slave %d pinned to Core %d\n",
-               slave_index,
-               target_core);
-
-    } else {
-
-        perror("sched_setaffinity failed");
-    }
-}
-
-
-
 int main(int argc, char *argv[]) {
     // int n, t, rows, columns;
     int n, rows, columns;
@@ -86,7 +45,7 @@ int main(int argc, char *argv[]) {
     // Seed the random number generator
     srand(time(NULL));
 
-    if (argc < 4) {
+    if (argc != 4) {
         printf("Usage: %s <n> <port> <status>\n", argv[0]);
         printf("status: 0 = master, 1 = slave\n");
         return 1;
@@ -95,8 +54,6 @@ int main(int argc, char *argv[]) {
     n = atoi(argv[1]);
     int port = atoi(argv[2]);
     int status = atoi(argv[3]);
-
-    int slave_idx = 0; if (argc == 5) { slave_idx = atoi(argv[4]); }
 
     printf("\nMatrix Size (n): %d\n", n);
     FILE *fp = fopen("config.txt", "r");
@@ -173,9 +130,6 @@ int main(int argc, char *argv[]) {
 
     if (status == 1) {
 
-    set_cpu_affinity(slave_idx);
-
-
     int server_fd, client_socket;
     struct sockaddr_in server_addr;
 
@@ -242,9 +196,10 @@ int main(int argc, char *argv[]) {
             0);
     }
 
+    if(recv_cols<=10){
     printf("\nReceived Matrix:\n");
     // printf("%d received rows", recv_rows);
-    if(recv_cols<=10){
+    
         for (int i = 0; i < recv_rows; i++) {
         for (int j = 0; j < recv_cols; j++) {
             printf("%4d", recv_matrix[i][j]);
@@ -260,7 +215,10 @@ int main(int argc, char *argv[]) {
 
         // printf("\nReceiving Time: %lf seconds\n",
         //     elapsedTime);
-        printf("\n[Slave %d | Core %d] Receiving Time: %lf seconds\n", slave_idx, sched_getcpu(), elapsedTime);
+printf("\n[Slave Port %d] Receiving Time: %lf seconds\n",
+       port,
+       elapsedTime);
+
     send(client_socket, "ack", 3, 0);
 
     close(client_socket);
@@ -295,8 +253,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Print the full original matrix
-    printf("\nOriginal Matrix X of size %d x %d:\n", rows, columns);
     if(n<=10){
+    printf("\nOriginal Matrix X of size %d x %d:\n", rows, columns);
+    
 
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < columns; j++) {
@@ -397,3 +356,21 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
+// 16
+// 127.0.0.1 8081
+// 127.0.0.1 8082
+// 127.0.0.1 8083
+// 127.0.0.1 8084
+// 127.0.0.1 8085
+// 127.0.0.1 8086
+// 127.0.0.1 8087
+// 127.0.0.1 8088
+// 127.0.0.1 8089
+// 127.0.0.1 8090
+// 127.0.0.1 8091
+// 127.0.0.1 8092
+// 127.0.0.1 8093
+// 127.0.0.1 8094
+// 127.0.0.1 8095
+// 127.0.0.1 8096
