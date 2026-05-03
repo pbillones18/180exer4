@@ -2,7 +2,7 @@
 #!/bin/bash
 
 PROGRAM_NAME="matrix_dist"
-SOURCE_FILE="lab032.c"
+SOURCE_FILE="lab032-ca.c"
 
 N_SIZE=4000
 NUM_SLAVES=16
