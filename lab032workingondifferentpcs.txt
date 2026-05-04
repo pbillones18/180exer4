@@ -1,0 +1,205 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <sys/time.h>
+#include <math.h>
+#include <errno.h>
+#include <unistd.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <signal.h>
+
+typedef struct {
+    char ip[50];
+    int port;
+} SlaveInfo;
+
+/**
+ * Robust helper to ensure all requested bytes are sent/received
+ * over the socket, as send/recv can return partial results.
+ */
+int send_all(int socket, void *buffer, size_t length) {
+    char *ptr = (char *)buffer;
+    while (length > 0) {
+        ssize_t i = send(socket, ptr, length, 0);
+        if (i < 1) return -1;
+        ptr += i;
+        length -= i;
+    }
+    return 0;
+}
+
+int recv_all(int socket, void *buffer, size_t length) {
+    char *ptr = (char *)buffer;
+    while (length > 0) {
+        ssize_t i = recv(socket, ptr, length, 0);
+        if (i < 1) return -1;
+        ptr += i;
+        length -= i;
+    }
+    return 0;
+}
+
+int main(int argc, char *argv[]) {
+    int n, t, rows, columns;
+    struct timeval t1, t2;
+    double elapsedTime;
+    SlaveInfo slaves[100];
+    int socks[100];
+
+    // Prevent SIGPIPE (Exit 141) from killing the process
+    signal(SIGPIPE, SIG_IGN);
+    srand(time(NULL));
+
+    if (argc != 4) {
+        printf("Usage: %s <n> <port> <status>\n", argv[0]);
+        printf("status: 0 = master, 1 = slave\n");
+        return 1;
+    }
+
+    n = atoi(argv[1]);
+    int port = atoi(argv[2]);
+    int status = atoi(argv[3]);
+
+    // --- Configuration Loading ---
+    FILE *fp = fopen("config.txt", "r");
+    if (fp == NULL) {
+        perror("config file failed");
+        return 1;
+    }
+    if (fscanf(fp, "%d", &t) != 1) {
+        fprintf(stderr, "Error reading number of slaves\n");
+        return 1;
+    }
+    for (int i = 0; i < t; i++) {
+        fscanf(fp, "%s %d", slaves[i].ip, &slaves[i].port);
+    }
+    fclose(fp);
+
+    // --- SLAVE LOGIC ---
+    if (status == 1) {
+        int server_fd, client_socket;
+        struct sockaddr_in server_addr;
+
+        server_fd = socket(AF_INET, SOCK_STREAM, 0);
+        int opt = 1;
+        setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_addr.s_addr = INADDR_ANY;
+        server_addr.sin_port = htons(port);
+
+        if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+            perror("bind failed");
+            return 1;
+        }
+
+        listen(server_fd, 5);
+        printf("\nSlave listening on port %d...\n", port);
+
+        client_socket = accept(server_fd, NULL, NULL);
+        if (client_socket < 0) {
+            perror("accept failed");
+            return 1;
+        }
+
+        printf("Master connected!\n");
+        struct timeval t3, t4;
+        gettimeofday(&t3, NULL);
+
+        int recv_rows, recv_cols;
+        if (recv_all(client_socket, &recv_rows, sizeof(int)) < 0) return 1;
+        if (recv_all(client_socket, &recv_cols, sizeof(int)) < 0) return 1;
+
+        printf("Receiving matrix of size %d x %d\n", recv_rows, recv_cols);
+
+        // CONTIGUOUS ALLOCATION
+        int *recv_matrix = (int *)malloc(recv_rows * recv_cols * sizeof(int));
+        if (recv_matrix == NULL) {
+            perror("Slave malloc failed");
+            return 1;
+        }
+
+        if (recv_all(client_socket, recv_matrix, recv_rows * recv_cols * sizeof(int)) < 0) {
+            fprintf(stderr, "Failed to receive matrix data\n");
+            return 1;
+        }
+
+        gettimeofday(&t4, NULL);
+        elapsedTime = (t4.tv_sec - t3.tv_sec) + (t4.tv_usec - t3.tv_usec) / 1000000.0;
+        printf("[Slave Port %d] Receiving Time: %lf seconds\n", port, elapsedTime);
+
+        send(client_socket, "ack", 4, 0); // Include null terminator
+
+        free(recv_matrix);
+        close(client_socket);
+        close(server_fd);
+        return 0;
+    }
+
+    // --- MASTER LOGIC ---
+    if (status == 0) {
+        // Connect to all slaves first
+        for (int i = 0; i < t; i++) {
+            struct sockaddr_in slave_addr;
+            socks[i] = socket(AF_INET, SOCK_STREAM, 0);
+            slave_addr.sin_family = AF_INET;
+            slave_addr.sin_port = htons(slaves[i].port);
+            inet_pton(AF_INET, slaves[i].ip, &slave_addr.sin_addr);
+
+            printf("Connecting to slave %d (%s:%d)...\n", i, slaves[i].ip, slaves[i].port);
+            if (connect(socks[i], (struct sockaddr*)&slave_addr, sizeof(slave_addr)) < 0) {
+                perror("connect failed");
+                return 1;
+            }
+        }
+
+        // CONTIGUOUS ALLOCATION for main matrix
+        int *arr = (int *)malloc(n * n * sizeof(int));
+        for (int i = 0; i < n * n; i++) {
+            arr[i] = (rand() % 100) + 1;
+        }
+
+        gettimeofday(&t1, NULL);
+        int starting_row = 0;
+        columns = n;
+
+        for (int s = 0; s < t; s++) {
+            int sub_rows = n / t + (s < n % t ? 1 : 0);
+            printf("Sending submatrix (%d rows) to slave %d\n", sub_rows, s);
+
+            send_all(socks[s], &sub_rows, sizeof(int));
+            send_all(socks[s], &columns, sizeof(int));
+
+            // Send submatrix in ONE giant block
+            int *submatrix_ptr = &arr[starting_row * columns];
+            if (send_all(socks[s], submatrix_ptr, sub_rows * columns * sizeof(int)) < 0) {
+                printf("Error sending data to slave %d\n", s);
+            }
+
+            starting_row += sub_rows;
+        }
+
+        // Wait for Acks
+        for (int s = 0; s < t; s++) {
+            char buffer[100];
+            memset(buffer, 0, 100);
+            if (recv(socks[s], buffer, sizeof(buffer), 0) > 0) {
+                printf("Slave %d replied: %s\n", s, buffer);
+            } else {
+                printf("Slave %d failed to reply.\n", s);
+            }
+            close(socks[s]);
+        }
+
+        gettimeofday(&t2, NULL);
+        elapsedTime = (t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec) / 1000000.0;
+        printf("\nDistribution Time: %lf seconds\n", elapsedTime);
+
+        free(arr);
+    }
+
+    return 0;
+}

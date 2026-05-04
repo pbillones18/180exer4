@@ -225,6 +225,7 @@ int main(int argc, char *argv[]) {
     recv(client_socket, &recv_rows, sizeof(int), 0);
     recv(client_socket, &recv_cols, sizeof(int), 0);
 
+    // if (recv_cols <= 10)
     printf("\nReceiving matrix of size %d x %d\n",
         recv_rows,
         recv_cols);
@@ -241,10 +242,10 @@ int main(int argc, char *argv[]) {
             recv_cols * sizeof(int),
             0);
     }
-
+if(recv_cols<=10){
     printf("\nReceived Matrix:\n");
     // printf("%d received rows", recv_rows);
-    if(recv_cols<=10){
+    
         for (int i = 0; i < recv_rows; i++) {
         for (int j = 0; j < recv_cols; j++) {
             printf("%4d", recv_matrix[i][j]);

@@ -5,7 +5,7 @@ PROGRAM_NAME="matrix_dist"
 SOURCE_FILE="lab032-ca.c"
 
 N_SIZE=4000
-NUM_SLAVES=16
+NUM_SLAVES=2
 START_PORT=8081
 
 echo "Compiling..."
